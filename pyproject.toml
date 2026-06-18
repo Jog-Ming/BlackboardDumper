@@ -1,0 +1,13 @@
+[project]
+name = "blackboard-dumper"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "lxml>=6.1.1",
+    "pathvalidate>=3.3.1",
+    "pyopenssl>=26.2.0",
+    "python-dateutil>=2.9.0.post0",
+    "requests>=2.34.2",
+    "urllib3>=2.7.0",
+]
