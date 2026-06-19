@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import sleep
 from typing import Final, Any
 from urllib.parse import unquote, urlparse
 
@@ -6,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 from dateutil.parser import parse as parse_date
 from pathvalidate import sanitize_filename
 from requests import Session
-from requests.exceptions import InvalidSchema
+from requests.exceptions import InvalidSchema, ChunkedEncodingError
 from urllib3.contrib.pyopenssl import inject_into_urllib3
 
 
@@ -32,6 +33,7 @@ def remove_tree(path: Path) -> None:
     path.rmdir()
 
 
+retries: Final[int] = 6
 inject_into_urllib3()
 s: Final[Session] = Session()
 cache: Final[dict[str, bytes]] = {}
@@ -58,16 +60,36 @@ def get(url: str) -> bytes:
 
 def download(url: str, path: Path) -> str:
     try:
-        r = s.get(url, stream=True)
-        if r.status_code == 404:
-            return url
-        filename: str = path.name
-        if path.is_dir():
-            path /= (filename := sanitize_filename(unquote(urlparse(r.url).path.split('/')[-1]), '_'))
-        with open(path, 'wb') as f:
-            for chunk in r.iter_content(1048576):
-                f.write(chunk)
-        return filename
+        with s.get(url, stream=True) as r:
+            if r.status_code == 404:
+                return url
+            filename: str = path.name
+            if path.is_dir():
+                path /= (filename := sanitize_filename(unquote(urlparse(r.url).path.split('/')[-1]), '_'))
+            try:
+                with open(path, 'wb') as f:
+                    for chunk in r.iter_content(1048576):
+                        f.write(chunk)
+                return filename
+            except ChunkedEncodingError:
+                pass
+        for i in range(retries):
+            print(f'Download failed. Sleeping for {2 ** i} seconds before retrying')
+            sleep(2 ** i)
+            with s.get(url, stream=True) as r:
+                if r.status_code == 404:
+                    return url
+                try:
+                    with open(path, 'wb') as f:
+                        for chunk in r.iter_content(1048576):
+                            f.write(chunk)
+                    return filename
+                except ChunkedEncodingError:
+                    pass
+        print(f'Failed to download {url} after {retries} retries')
+        path.chmod(0o777)
+        path.unlink(missing_ok=True)
+        return url
     except InvalidSchema:
         return url
 
