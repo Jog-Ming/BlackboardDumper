@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/Blackboard" />
     </content>
-    <orderEntry type="jdk" jdkName="uv (Blackboard Dumper)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="uv (BlackboardDumper)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
